@@ -1,0 +1,7 @@
+*.pyc
+.vscode
+*.log
+*.npy
+__pycache__
+data
+output
