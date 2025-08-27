@@ -3,6 +3,7 @@
 Dataset generation script
 """
 
+from typing import List
 import os
 import sys
 import json
@@ -42,8 +43,8 @@ class DatasetCreator:
     def _setup_output_and_logging(self):
         """Setup output directory and logging"""
         # Get dataset path configuration
-        data_name = self.config.get('DATA', 'dataset')
-        data_path = self.config.get('DATA_PATH', 'data')
+        data_name = self.config.get('data', 'dataset')
+        data_path = self.config.get('data_path', 'data')
         
         # Create complete output path
         self.output_dir = os.path.join(data_path, data_name)
@@ -76,19 +77,18 @@ class DatasetCreator:
     def create_dataset(self):
         """Create dataset"""
         # Get dataset type and parameters
-        cipher_type = self.config.get('CIPHER')
+        cipher_type = self.config.get('cipher')
         if not cipher_type:
-            raise ValueError("Configuration file must specify 'CIPHER' field")
+            raise ValueError("Configuration file must specify 'cipher' field")
         
         # Get common parameters
-        n = self.config.get('N', 10**7)
-        nr = self.config.get('NR', 7)
-        key_mode = self.config.get('KEY_MODE', 'random')  # 'random', 'random_fixed', 'input_fixed'
-        key = self.config.get('KEY', None)  # Only used when KEY_MODE is 'input_fixed'
-        diff = self.config.get('DIFF', [0x0040, 0])
-        real_diff = self.config.get('REAL_DIFF', False)
-        seed = self.config.get('SEED', 42)
-        train_ratio = self.config.get('TRAIN_RATIO', 0.9)
+        n = self.config.get('n', 10**7)
+        nr = self.config.get('nr', 7)
+        key_mode = self.config.get('key_mode', 'random')  # 'random', 'random_fixed', 'input_fixed'
+        key = self.config.get('key', None)  # Only used when key_mode is 'input_fixed'
+        diff = self.config.get('diff', [0x0040, 0])
+        seed = self.config.get('seed', 42)
+        train_ratio = self.config.get('train_ratio', 0.9)
         
         # Ensure numeric parameters are correctly converted
         if isinstance(n, str):
@@ -98,6 +98,13 @@ class DatasetCreator:
                 n = int(n)
         n = int(n)
         
+        # Handle key parameter conversion for hex strings
+        if key is not None and isinstance(key, str):
+            try:
+                key = eval(key)  # Handle hex strings like "[0x1918, 0x1110, 0x0908, 0x0100]"
+            except:
+                raise ValueError(f"Invalid key format: {key}. Expected hex list like [0x1918, 0x1110, 0x0908, 0x0100]")
+           
         nr = int(nr)
         seed = int(seed)
         train_ratio = float(train_ratio)
@@ -111,15 +118,14 @@ class DatasetCreator:
         self.logger.log(f"  Number of rounds: {nr}")
         self.logger.log(f"  Key mode: {key_mode}")
         self.logger.log(f"  Differential: {diff}")
-        self.logger.log(f"  Real differential: {real_diff}")
         self.logger.log(f"  Training set ratio: {train_ratio}")
         self.logger.log(f"  Random seed: {seed}")
         
         try:
             # Use dataset registry to get dataset class and create instance
             dataset_class = dataset_registry.get_dataset_class(cipher_type)
-            dataset = dataset_class(n=n, nr=nr, key_mode=key_mode, key=key, diff=diff, real_diff=real_diff)
-            single_key = dataset.single_key.tolist()
+            dataset = dataset_class(n=n, nr=nr, key_mode=key_mode, key=key, diff=diff)
+            single_key = dataset.single_key
         except ValueError as e:
             # If it's a ValueError, re-raise directly
             raise e
@@ -127,10 +133,9 @@ class DatasetCreator:
             # Other exceptions, provide more detailed error information
             available_ciphers = dataset_registry.list_dataset_classes()
             raise ValueError(f"Failed to create dataset: {e}\nAvailable cipher types: {available_ciphers}")
-        
-        # Extract features and labels
-        X = dataset.X
-        Y = dataset.Y.reshape(-1, 1)  # shape (n, 1)
+
+        X, Y = dataset.generate_training_data(n, nr, diff)
+        Y = Y.reshape(-1, 1)  # shape (n, 1)
         
         # Split dataset
         n_train = int(n * train_ratio)
@@ -175,10 +180,9 @@ class DatasetCreator:
             "train_ratio": train_ratio,
             "nr": nr,
             "diff": diff,
-            "real_diff": real_diff,
             "seed": seed,
             "key_mode": key_mode,
-            "key": single_key,
+            "key": single_key.tolist() if hasattr(single_key, 'tolist') else single_key,
             "feature_dim": X.shape[1],
             "created_at": datetime.now().isoformat(),
             "files": {

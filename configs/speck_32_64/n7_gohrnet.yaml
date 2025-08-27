@@ -1,0 +1,51 @@
+experiment:
+  name: "gohrnet_4x16"
+  output_dir: "output/n7"
+  seed: 42
+
+data:
+  path: "data/speck_32_64_n7"
+
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape: [4, 16]
+  normalize: true
+
+model:
+  type: "GohrNet"
+  params:
+    length: 16
+    in_channels: 4
+    n_filters: 32
+    n_blocks: 10
+    d1: 64
+    d2: 64
+
+training:
+  epochs: 100
+  batch_size: 5000
+  eval_interval: 5
+  checkpoint_interval: 20
+  device: "cuda:1"
+
+  loss:
+    type: "BCEWithLogitsLoss"
+    params: {}
+  
+  optimizer:
+    type: "AdamW"
+    params:
+      lr: 2e-3
+      betas: [0.9, 0.999]
+      weight_decay: 1e-5
+  
+  scheduler:
+    type: "CosineAnnealingWarmRestarts"
+    params:
+      T_0: 10000
+      T_mult: 1
+      eta_min: 1e-4
+
+# evaluation:
+#   metrics: "ConfusionMatrix" 

@@ -34,6 +34,27 @@ class ModelRegistry:
                 self._model_classes[name] = obj
                 # print(f"Auto-registered model class: {name}")
     
+    # def auto_register_torch_models(self):
+    #     """Automatically register all models in the torch directory"""
+    #     try:
+    #         # Import torch module
+    #         from . import torch
+            
+    #         # Iterate through all attributes of the torch module
+    #         for name, obj in inspect.getmembers(torch):
+    #             # Check if it's a function (model creation function)
+    #             if (inspect.isfunction(obj) and 
+    #                 name not in self._models):
+                    
+    #                 # Auto-register model function
+    #                 self._models[name] = obj
+    #                 # print(f"Auto-registered torch model: {name}")
+                    
+    #     except ImportError as e:
+    #         print(f"Failed to import torch module: {e}")
+    #     except Exception as e:
+    #         print(f"Error auto-registering torch models: {e}")
+    
     def get_model(self, model_type: str, **params) -> nn.Module:
         """Create model based on model type and parameters"""
         if model_type not in self._models:

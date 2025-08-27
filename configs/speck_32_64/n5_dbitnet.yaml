@@ -1,25 +1,26 @@
 experiment:
-  name: "n5_gohrnet"
-  output_dir: "output/speck_32_64"
+  name: "dbitnet_1x64"
+  output_dir: "output/n5"
   seed: 42
 
 data:
   path: "data/speck_32_64_n5"
 
 processor:
+  swap_pairs: false
+  xor_channel: false
   reshape: [1, 64]
   normalize: true
 
 model:
-  type: "GohrNet"
+  type: "DBitNet"
   params:
-    input_dim: 64
-    num_blocks: 10
-    channels: 32
-    word_size: 16
-    d1: 64
+    length: 64
+    in_channels: 1
+    d1: 256
     d2: 64
-    bit_slicing: false
+    n_filters: 32
+    n_add_filters: 16
 
 training:
   epochs: 100

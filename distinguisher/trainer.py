@@ -156,6 +156,32 @@ class Trainer:
         except Exception as e:
             raise ValueError(f"Failed to create model {model_type}: {e}")
     
+    def _load_pretrained_model(self):
+        """Load pretrained model checkpoint"""
+        training_config = self.config_manager.get_training_config()
+        pretrained = training_config.get('pretrained', None)
+        
+        if pretrained is not None:
+            if not os.path.exists(pretrained):
+                raise ValueError(f"Pretrained model path does not exist: {pretrained}")
+            
+            try:
+                # Load checkpoint
+                checkpoint = torch.load(pretrained, map_location=self.device)
+                
+                # Load model state dict
+                if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
+                    # Full checkpoint format
+                    self.model.load_state_dict(checkpoint['model_state_dict'])
+                    self.logger.log(f"Loaded model state from: {pretrained}")
+                else:
+                    # Simple state dict format
+                    self.model.load_state_dict(checkpoint)
+                    self.logger.log(f"Loaded model state from: {pretrained}")
+                
+            except Exception as e:
+                raise ValueError(f"Failed to load pretrained model from {pretrained}: {e}")
+    
     def _setup_training(self):
         """Setup training components"""
         training_config = self.config_manager.get_training_config()
@@ -236,6 +262,7 @@ class Trainer:
         # Initialize components
         self._load_data()
         self._create_model()
+        self._load_pretrained_model()  # Load pretrained model if specified
         self._setup_training()
         
         # Get training parameters

@@ -49,20 +49,20 @@ class WideNarrowBlock(nn.Module):
 class DBitNet(nn.Module):
     """DBitNet model for neural distinguisher"""
     
-    def __init__(self, input_size=64, d1=256, d2=64, n_filters=32, n_add_filters=16):
+    def __init__(self, length=64, in_channels=1, d1=256, d2=64, n_filters=32, n_add_filters=16):
         super().__init__()
         
         # Determine dilation rates
-        self.dilation_rates = get_dilation_rates(input_size)
+        self.dilation_rates = get_dilation_rates(length)
         
         # Wide-narrow blocks
         self.blocks = nn.ModuleList()
         current_filters = n_filters
         
         for i, dilation_rate in enumerate(self.dilation_rates):
-            in_channels = 1 if i == 0 else current_filters - n_add_filters
+            block_in_channels = in_channels if i == 0 else current_filters - n_add_filters
             block = WideNarrowBlock(
-                in_channels=in_channels,
+                in_channels=block_in_channels,
                 out_channels=current_filters,
                 dilation_rate=dilation_rate
             )
@@ -74,10 +74,10 @@ class DBitNet(nn.Module):
         
         # Compute flattened feature size to create dense0 deterministically so checkpoints load cleanly
         if len(self.dilation_rates) == 0:
-            final_length = input_size
-            final_channels = 1
+            final_length = length
+            final_channels = in_channels
         else:
-            final_length = input_size - sum(self.dilation_rates)
+            final_length = length - sum(self.dilation_rates)
             final_channels = n_filters + (len(self.dilation_rates) - 1) * n_add_filters
         dense0_in_features = final_channels * final_length
 

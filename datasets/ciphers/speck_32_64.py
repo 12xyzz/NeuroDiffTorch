@@ -4,14 +4,10 @@ from os import urandom
 
 
 class Speck_32_64_Dataset(Dataset):
-    def __init__(self, n, nr, key_mode='random', key=None, diff=(0x0040,0), real_diff=False):
-        self.speck = Speck_32_64()
+    def __init__(self, n, nr, key_mode='random', key=None, diff=(0x0040,0)):
+        self.cipher = Speck_32_64()
         self.single_key, self.key_array = self._generate_keys(n, key_mode, key)
-        
-        if real_diff:
-            self.X, self.Y = self.real_differences_data(n, nr, diff)
-        else:
-            self.X, self.Y = self.random_differences_data(n, nr, diff)
+        self.X, self.Y = self.generate_training_data(n, nr, diff)
 
     def __len__(self):
         return len(self.Y)
@@ -19,36 +15,58 @@ class Speck_32_64_Dataset(Dataset):
     def __getitem__(self, idx):
         return self.X[idx], self.Y[idx]
 
-    def random_differences_data(self, n, nr, diff=(0x0040,0)):
-        Y = np.frombuffer(urandom(n), dtype=np.uint8); Y = Y & 1
-        plain0l = np.frombuffer(urandom(2*n),dtype=np.uint16)
-        plain0r = np.frombuffer(urandom(2*n),dtype=np.uint16)
-        plain1l = plain0l ^ diff[0]; plain1r = plain0r ^ diff[1]
-        num_rand_samples = np.sum(Y==0)
-        if num_rand_samples > 0:
-            plain1l[Y==0] = np.frombuffer(urandom(2*num_rand_samples),dtype=np.uint16)
-            plain1r[Y==0] = np.frombuffer(urandom(2*num_rand_samples),dtype=np.uint16)
-        ks = self.speck.expand_key(self.key_array, nr)
-        ctdata0l, ctdata0r = self.speck.encrypt((plain0l, plain0r), ks)
-        ctdata1l, ctdata1r = self.speck.encrypt((plain1l, plain1r), ks)
-        X = self.speck.to_bits([ctdata0l, ctdata0r, ctdata1l, ctdata1r])
-        return X, Y
+    def generate_plaintext_triples(self, n, diff):
+        p1_l = np.frombuffer(urandom(2*n), dtype=np.uint16)
+        p1_r = np.frombuffer(urandom(2*n), dtype=np.uint16)
+
+        p1_prime_l = p1_l ^ diff[0]
+        p1_prime_r = p1_r ^ diff[1]
         
-    def real_differences_data(self, n, nr, diff=(0x0040,0)):
-        Y = np.frombuffer(urandom(n), dtype=np.uint8); Y = Y & 1 
-        plain0l = np.frombuffer(urandom(2*n),dtype=np.uint16)
-        plain0r = np.frombuffer(urandom(2*n),dtype=np.uint16)
-        plain1l = plain0l ^ diff[0]; plain1r = plain0r ^ diff[1]
-        num_rand_samples = np.sum(Y==0)
-        ks = self.speck.expand_key(self.key_array, nr)
-        ctdata0l, ctdata0r = self.speck.encrypt((plain0l, plain0r), ks)
-        ctdata1l, ctdata1r = self.speck.encrypt((plain1l, plain1r), ks)
-        if num_rand_samples > 0:
-            k0 = np.frombuffer(urandom(2*num_rand_samples),dtype=np.uint16)
-            k1 = np.frombuffer(urandom(2*num_rand_samples),dtype=np.uint16)
-            ctdata0l[Y==0] = ctdata0l[Y==0] ^ k0; ctdata0r[Y==0] = ctdata0r[Y==0] ^ k1
-            ctdata1l[Y==0] = ctdata1l[Y==0] ^ k0; ctdata1r[Y==0] = ctdata1r[Y==0] ^ k1
-        X = self.speck.to_bits([ctdata0l, ctdata0r, ctdata1l, ctdata1r])
+        p2_l = np.frombuffer(urandom(2*n), dtype=np.uint16)
+        p2_r = np.frombuffer(urandom(2*n), dtype=np.uint16)
+        
+        p1 = list(zip(p1_l, p1_r))
+        p1_prime = list(zip(p1_prime_l, p1_prime_r))
+        p2 = list(zip(p2_l, p2_r))
+        
+        return p1, p1_prime, p2
+    
+    def encrypt_plaintext_pairs(self, p1_list, p2_list, nr):
+        if len(p1_list) != len(p2_list):
+            raise ValueError("plaintext list length must be the same")
+        
+        n = len(p1_list)
+        if n == 0:
+            return [], []
+        
+        p1_l = np.array([p[0] for p in p1_list], dtype=np.uint16)
+        p1_r = np.array([p[1] for p in p1_list], dtype=np.uint16)
+        p2_l = np.array([p[0] for p in p2_list], dtype=np.uint16)
+        p2_r = np.array([p[1] for p in p2_list], dtype=np.uint16)
+        
+        ks = self.cipher.expand_key(self.key_array, nr)
+        c1_l, c1_r = self.cipher.encrypt((p1_l, p1_r), ks)
+        c2_l, c2_r = self.cipher.encrypt((p2_l, p2_r), ks)
+        
+        c1_list = list(zip(c1_l, c1_r))
+        c2_list = list(zip(c2_l, c2_r))
+        
+        return c1_list, c2_list
+    
+    def generate_training_data(self, n, nr, diff=(0x0040,0)):
+        p1, p1_prime, p2 = self.generate_plaintext_triples(n, diff)
+        chosen = np.random.random(n) > 0.5
+        
+        c1, c2 = self.encrypt_plaintext_pairs(p1,  [p1_prime[i] if chosen[i] else p2[i] for i in range(n)], nr)
+        Y = chosen.astype(np.uint8)
+        
+        c1_l = np.array([ct[0] for ct in c1], dtype=np.uint16)
+        c1_r = np.array([ct[1] for ct in c1], dtype=np.uint16)
+        c2_l = np.array([ct[0] for ct in c2], dtype=np.uint16)
+        c2_r = np.array([ct[1] for ct in c2], dtype=np.uint16)
+        
+        X = self.cipher.to_bits([c1_l, c1_r, c2_l, c2_r])
+        
         return X, Y
 
     def _generate_keys(self, n, key_mode='random', key=None):

@@ -1,13 +1,13 @@
 # Dataset
-DATA: speck_32_64_n5
-DATA_PATH: 'data'
+data: speck_32_64_n7
+data_path: 'data'
 
 # Cipher
-CIPHER: Speck_32_64
-N: 10**7
-NR: 5
-KEY_MODE: 'random'
-DIFF: [0x0040, 0]
-REAL_DIFF: false
-SEED: 42
-TRAIN_RATIO: 0.9
+cipher: Speck_32_64
+n: 10**7
+nr: 7
+key_mode: 'input_fixed'
+key: [0x1918, 0x1110, 0x0908, 0x0100]
+diff: [0x0040, 0]
+seed: 42
+train_ratio: 0.9
