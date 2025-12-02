@@ -78,7 +78,7 @@ class Speck_32_64_Dataset(Dataset):
             key_array = single_key.reshape(4, 1).repeat(n, axis=1)
         elif key_mode == 'input_fixed':
             if key is None:
-                raise ValueError("KEY_MODE is 'input_fixed' but no key provided")
+                raise ValueError("key_mode is 'input_fixed' but no key provided")
             single_key = key
             key_array = np.array(key, dtype=np.uint16)
             if len(key_array) != 4:

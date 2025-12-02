@@ -23,29 +23,21 @@ model:
     n_add_filters: 16
 
 training:
-  epochs: 100
+  epochs: 40
   batch_size: 5000
+  num_workers: 24
   eval_interval: 5
   checkpoint_interval: 20
   device: "cuda:0"
+  use_amp: true 
 
   loss:
     type: "BCEWithLogitsLoss"
     params: {}
-  
+
   optimizer:
     type: "AdamW"
     params:
-      lr: 2e-3
+      lr: 1e-3
       betas: [0.9, 0.999]
       weight_decay: 1e-5
-  
-  scheduler:
-    type: "CosineAnnealingWarmRestarts"
-    params:
-      T_0: 10000
-      T_mult: 1
-      eta_min: 1e-4
-
-# evaluation:
-#   metrics: "ConfusionMatrix" 

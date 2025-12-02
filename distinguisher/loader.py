@@ -37,21 +37,21 @@ class DatasetLoader:
         with open(config_file, 'r', encoding='utf-8') as f:
             return yaml.safe_load(f)
     
-    def load_data(self, split='train', batch_size=32, shuffle=True, device='cpu'):
+    def load_data(self, split='train', batch_size=5000, num_workers=24, shuffle=True):
         """
         Load data
         
         Args:
             split: Dataset split ('train' or 'val')
             batch_size: Batch size
+            num_workers: Number of workers
             shuffle: Whether to shuffle data
-            device: Device
             
         Returns:
             DataLoader: Data loader
         """
         if split not in ['train', 'val']:
-            raise ValueError("split must be 'train' or 'val'")
+            raise ValueError("Dataset split must be 'train' or 'val'")
         
         # Load data file
         data_file = os.path.join(self.dataset_path, f"{split}.npy")
@@ -67,16 +67,18 @@ class DatasetLoader:
         X = torch.tensor(features, dtype=torch.float32)
         Y = torch.tensor(labels, dtype=torch.float32).unsqueeze(1)
         
-        # If device is specified, move data to device
-        if device != 'cpu':
-            X = X.to(device)
-            Y = Y.to(device)
-        
         # Create dataset
         dataset = TensorDataset(X, Y)
         
         # Create data loader
-        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        dataloader = DataLoader(
+            dataset, 
+            batch_size=batch_size, 
+            num_workers=num_workers, 
+            shuffle=shuffle, 
+            pin_memory=True, 
+            persistent_workers=num_workers > 0
+        )
         
         return dataloader
     

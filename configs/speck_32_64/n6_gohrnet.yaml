@@ -23,11 +23,13 @@ model:
     d2: 64
 
 training:
-  epochs: 100
+  epochs: 40
   batch_size: 5000
+  num_workers: 24
   eval_interval: 5
   checkpoint_interval: 20
   device: "cuda:1"
+  use_amp: true
 
   loss:
     type: "BCEWithLogitsLoss"
@@ -43,9 +45,6 @@ training:
   scheduler:
     type: "CosineAnnealingWarmRestarts"
     params:
-      T_0: 10000
+      T_0: 18000
       T_mult: 1
       eta_min: 1e-4
-
-# evaluation:
-#   metrics: "ConfusionMatrix" 

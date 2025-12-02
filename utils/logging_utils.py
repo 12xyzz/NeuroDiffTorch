@@ -43,7 +43,8 @@ class Logger:
     
     def log_epoch(self, epoch: int, total_epochs: int, train_loss: float = None,
                   learning_rate: Optional[float] = None, train_accuracy: Optional[float] = None,
-                  eval_accuracy: Optional[float] = None, time_info: Optional[dict] = None):
+                  eval_accuracy: Optional[float] = None, time_info: Optional[dict] = None,
+                  warmup_info: str = ""):
         """Log training epoch information"""
         message = f"Epoch {epoch}/{total_epochs}"
         if train_loss is not None:
@@ -54,6 +55,10 @@ class Logger:
             message += f", Train Acc: {train_accuracy:.4f}"
         if eval_accuracy is not None:
             message += f", Eval Acc: {eval_accuracy:.4f}"
+        
+        # Add warmup information
+        if warmup_info:
+            message += warmup_info
         
         # Add time information
         if time_info:
@@ -67,6 +72,20 @@ class Logger:
             completion_str = datetime.fromtimestamp(completion_time).strftime("%H:%M:%S")
             
             message += f" | Avg Epoch: {avg_epoch_str}, ETA: {remaining_str}"
+        
+        self.log(message)
+    
+    def log_epoch_warmup(self, epoch: int, total_epochs: int, train_loss: float = None,
+                        learning_rate: Optional[float] = None, warmup_step: int = 0, 
+                        total_warmup_steps: int = 0):
+        """Log training epoch information during warmup phase"""
+        message = f"Epoch {epoch}/{total_epochs}"
+        if train_loss is not None:
+            message += f" - Train Loss: {train_loss:.4f}"
+        if learning_rate is not None:
+            message += f", LR: {learning_rate:.6f}"
+
+        message += f" [Warmup {warmup_step}/{total_warmup_steps}]"
         
         self.log(message)
     

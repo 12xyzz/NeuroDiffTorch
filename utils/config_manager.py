@@ -63,7 +63,7 @@ class ConfigManager:
             # Convert learning rate scheduler parameters
             if 'scheduler' in training and 'params' in training['scheduler']:
                 scheduler_params = training['scheduler']['params']
-                self._convert_scheduler_params(scheduler_params, training.get('optimizer', {}))
+                self._convert_scheduler_params(scheduler_params)
         
         # Convert model parameters
         if 'model' in config and 'params' in config['model']:
@@ -113,7 +113,7 @@ class ConfigManager:
                 except (ValueError, TypeError):
                     raise ValueError(f"Loss function parameter {param} must be numeric, current value: {params[param]}")
     
-    def _convert_scheduler_params(self, params: Dict[str, Any], optimizer_config: Dict[str, Any]):
+    def _convert_scheduler_params(self, params: Dict[str, Any]):
         """Convert learning rate scheduler parameter types and validate consistency"""
         # Numeric parameters
         numeric_params = ['base_lr', 'max_lr', 'step_size', 'gamma', 'T_max', 'eta_min', 'step_size_up', 'step_size_down']

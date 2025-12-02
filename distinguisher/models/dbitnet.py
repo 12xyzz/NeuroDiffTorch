@@ -35,12 +35,15 @@ class WideNarrowBlock(nn.Module):
         
     def forward(self, x):
         # Wide block
-        x = F.relu(self.wide_bn(self.wide_conv(x)))
+        x = self.wide_conv(x)
+        x = F.relu(x)
+        x = self.wide_bn(x)
         x_skip = x
         
         # Narrow block with causal padding
         x = F.pad(x, (1, 0))  # Left padding 1, right padding 0
-        x = F.relu(self.narrow_conv(x))
+        x = self.narrow_conv(x)
+        x = F.relu(x)
         x = x + x_skip  # Add residual connection
         x = self.narrow_bn(x)
         
@@ -59,14 +62,15 @@ class DBitNet(nn.Module):
         self.blocks = nn.ModuleList()
         current_filters = n_filters
         
+        prev_out_channels = in_channels
         for i, dilation_rate in enumerate(self.dilation_rates):
-            block_in_channels = in_channels if i == 0 else current_filters - n_add_filters
             block = WideNarrowBlock(
-                in_channels=block_in_channels,
+                in_channels=prev_out_channels,
                 out_channels=current_filters,
                 dilation_rate=dilation_rate
             )
             self.blocks.append(block)
+            prev_out_channels = current_filters
             current_filters += n_add_filters
         
         # Prediction head

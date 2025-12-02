@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.cuda.amp import autocast, GradScaler
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
 from utils import ConfigManager, Logger
@@ -16,6 +17,31 @@ from .models import model_registry
 from .loader import DatasetLoader
 from .processor import DataProcessor
 from datasets import dataset_registry
+from tqdm import tqdm
+
+class StepLRSchedulerController:
+    """Uniform learning rate controller"""
+    def __init__(self, optimizer, scheduler=None, warmup_steps=0, base_lr=None):
+        self.optimizer = optimizer
+        self.scheduler = scheduler
+        self.warmup_steps = warmup_steps
+        self.base_lr = base_lr or optimizer.param_groups[0]['lr']
+        self.global_step = 0
+
+    def step(self):
+        self.global_step += 1
+        if self.warmup_steps > 0 and self.global_step <= self.warmup_steps:
+            self.optimizer.param_groups[0]['lr'] = (
+                self.base_lr * self.global_step / self.warmup_steps
+            )
+        else:
+            if self.scheduler:
+                if self.global_step == self.warmup_steps + 1:
+                    self.scheduler.last_epoch = self.warmup_steps
+                self.scheduler.step()
+
+    def get_lr(self):
+        return self.optimizer.param_groups[0]['lr']
 
 class Trainer:
     """Configuration-driven trainer"""
@@ -56,6 +82,7 @@ class Trainer:
         self.optimizer = None
         self.train_loader = None
         self.eval_loader = None
+        self.scaler = None
         
     def _setup_output_and_logging(self):
         """Setup output directory and logging"""
@@ -87,7 +114,8 @@ class Trainer:
         dataset_path = data_config['path']
         
         # Get training parameters
-        batch_size = self.config_manager.get('training.batch_size')
+        self.batch_size = self.config_manager.get('training.batch_size')
+        self.num_workers = self.config_manager.get('training.num_workers')
         
         # Get processor configuration
         processor_config = self.config_manager.get('processor', {})
@@ -99,16 +127,16 @@ class Trainer:
             # Load original training and validation data
             self.train_loader = dataset_loader.load_data(
                 split='train', 
-                batch_size=batch_size, 
-                shuffle=True, 
-                device=self.device
+                batch_size=self.batch_size, 
+                num_workers=self.num_workers,
+                shuffle=True
             )
             
             self.eval_loader = dataset_loader.load_data(
                 split='val', 
-                batch_size=batch_size, 
-                shuffle=False, 
-                device=self.device
+                batch_size=self.batch_size, 
+                num_workers=self.num_workers,
+                shuffle=False
             )
             
             # Get dataset information
@@ -120,20 +148,56 @@ class Trainer:
             self.logger.log(f"  Cipher type: {dataset_info['cipher_type']}")
             self.logger.log(f"  Training set: {dataset_info['train_samples']}")
             self.logger.log(f"  Validation set: {dataset_info['val_samples']}")
-            self.logger.log(f"  Batch size: {batch_size}")
+            self.logger.log(f"  Batch size: {self.batch_size}")
+            self.logger.log(f"  Number of workers: {self.num_workers}")
             self.logger.log(f"  Feature dimension: {dataset_info['feature_dim']}")
             
             # Save dataset information to trainer
             self.dataset_info = dataset_info
             
-            # Create data processor
+            # Create data processor and preprocess all data
             self.processor = DataProcessor(processor_config)
-            self.logger.log(f"Data processing completed:")
-            self.logger.log(f"  Normalization: {processor_config.get('normalize', False)}")
-            self.logger.log(f"  Reshape: {processor_config.get('reshape', 'None')}")
             
+            self.train_loader = self._preprocess_data_loader(self.train_loader, "training")
+            self.eval_loader = self._preprocess_data_loader(self.eval_loader, "validation")
+
+            self.logger.log(f"Data preprocessing completed.")        
+
         except Exception as e:
             raise ValueError(f"Failed to load dataset: {e}")
+    
+    def _preprocess_data_loader(self, data_loader, is_training=True):
+        """
+        Preprocess all data in a data loader
+        
+        Args:
+            data_loader: Data loader to preprocess
+            split_name: Name of the split
+        """
+        all_processed_data = []
+        all_labels = []
+
+        for batch_idx, (X_batch, Y_batch) in enumerate(data_loader):
+            processed_data = self.processor.process(X_batch)
+            
+            all_processed_data.append(processed_data.cpu())
+            all_labels.append(Y_batch.cpu())
+        
+        processed_data = torch.cat(all_processed_data, dim=0)
+        labels = torch.cat(all_labels, dim=0)
+        
+        dataset = TensorDataset(processed_data, labels)
+
+        dataloader = DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            num_workers=self.num_workers,
+            shuffle=is_training,
+            pin_memory=True,
+            persistent_workers=self.num_workers > 0
+        )
+            
+        return dataloader
     
     def _create_model(self):
         """Create model"""
@@ -216,6 +280,7 @@ class Trainer:
             # Directly call PyTorch optimizer through string
             optimizer_class = getattr(optim, optimizer_type)
             self.optimizer = optimizer_class(self.model.parameters(), **optimizer_params)
+            self.base_lr = self.optimizer.param_groups[0]['lr']
             self.logger.log(f"Optimizer creation completed: {optimizer_type}")
         except AttributeError:
             raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
@@ -224,31 +289,56 @@ class Trainer:
         
         # Create learning rate scheduler (if configured)
         self.scheduler = None
+        self.warmup_steps = 0
         if 'scheduler' in training_config:
             scheduler_config = training_config['scheduler']
             scheduler_type = scheduler_config['type']
             scheduler_params = scheduler_config.get('params', {})
+            self.warmup_steps = scheduler_config.get('warmup_steps', 0)
             
             try:
                 # Dynamically create learning rate scheduler
                 scheduler_class = getattr(optim.lr_scheduler, scheduler_type)
+                if 'last_epoch' not in scheduler_params:
+                    scheduler_params['last_epoch'] = -1
                 self.scheduler = scheduler_class(self.optimizer, **scheduler_params)
-                self.logger.log(f"Learning rate scheduler creation completed: {scheduler_type}")
+                self.logger.log(f"Scheduler creation completed: {scheduler_type}")
             except AttributeError:
-                raise ValueError(f"Unsupported learning rate scheduler type: {scheduler_type}")
+                raise ValueError(f"Unsupported scheduler type: {scheduler_type}")
             except Exception as e:
-                raise ValueError(f"Failed to create learning rate scheduler {scheduler_type}: {e}")
+                raise ValueError(f"Failed to create scheduler {scheduler_type}: {e}")
+   
+        # Create unified scheduler controller
+        self.lr_controller = StepLRSchedulerController(
+            optimizer=self.optimizer,
+            scheduler=self.scheduler,
+            warmup_steps=self.warmup_steps,
+            base_lr=self.base_lr
+        )
+        self.logger.log(f"LR controller created with warmup_steps: {self.warmup_steps}")
+        
+        # Initialize AMP scaler (enable by default for GPU training)
+        use_amp = training_config.get('use_amp', self.device.type == 'cuda')
+        if use_amp and self.device.type == 'cuda':
+            self.scaler = GradScaler()
+            self.logger.log("AMP enabled")
+        else:
+            self.scaler = None
+            self.logger.log("AMP disabled")
     
     def _evaluate(self, epoch: int = None) -> Tuple[float, float]:
         """Evaluate model, return (training accuracy, validation accuracy)"""
+        # Check if AMP is enabled
+        use_amp = self.scaler is not None
+        
         # Evaluate validation set
         eval_metrics = self.evaluator.evaluate_model(
-            self.model, self.eval_loader, self.device, epoch, self.processor
+            self.model, self.eval_loader, self.device, epoch, use_amp
         )
         
         # Evaluate training set
         train_metrics = self.evaluator.evaluate_model(
-            self.model, self.train_loader, self.device, epoch, self.processor
+            self.model, self.train_loader, self.device, epoch, use_amp
         )
         
         # Get evaluation results
@@ -275,7 +365,6 @@ class Trainer:
         self.logger.start_training_timer(epochs)
         
         # Training loop
-        global_step = 0
         for epoch in range(1, epochs + 1):
             # Training phase
             self.model.train()
@@ -283,38 +372,59 @@ class Trainer:
             n_train = len(self.train_loader.dataset)
             
             for X_batch, Y_batch in self.train_loader:
-                # Use processor to process data
-                X_batch = self.processor.process(X_batch)
+                # Move data to device
+                X_batch = X_batch.to(self.device)
+                Y_batch = Y_batch.to(self.device)
                 
                 self.optimizer.zero_grad()
-                logits = self.model(X_batch)
-                loss = self.criterion(logits, Y_batch)
-                loss.backward()
-                self.optimizer.step()
                 
-                # Scheduler updates by global step (stable learning rate control)
-                global_step += 1
-                if self.scheduler is not None:
-                    self.scheduler.step(global_step)
+                # Use AMP for forward pass
+                if self.scaler is not None:
+                    with autocast():
+                        logits = self.model(X_batch)
+                        loss = self.criterion(logits, Y_batch)
+                    
+                    # Scale loss and backward pass
+                    self.scaler.scale(loss).backward()
+                    self.scaler.step(self.optimizer)
+                    self.scaler.update()
+                else:
+                    # Standard training without AMP
+                    logits = self.model(X_batch)
+                    loss = self.criterion(logits, Y_batch)
+                    loss.backward()
+                    self.optimizer.step()
                 
+                # Use unified scheduler controller
+                self.lr_controller.step()
+
                 total_loss += loss.item() * X_batch.size(0)
             
             avg_loss = total_loss / n_train
             
-            # Get current learning rate (regardless of scheduler)
-            current_lr = self.optimizer.param_groups[0]['lr']
+            # Get current learning rate from controller
+            current_lr = self.lr_controller.get_lr()
+            
+            # Check if still in warmup phase
+            is_warmup = self.lr_controller.global_step <= self.lr_controller.warmup_steps
             
             # Record time information
             time_info = self.logger.record_epoch_time(epoch)
             
-            # Evaluation
-            if epoch % eval_interval == 0 or epoch == epochs:
-                train_accuracy, eval_accuracy = self._evaluate(epoch)
-                # Log training loss, learning rate, training accuracy and validation accuracy, plus time information
-                self.logger.log_epoch(epoch, epochs, avg_loss, current_lr, train_accuracy, eval_accuracy, time_info)
+            # Log based on warmup phase
+            if is_warmup:
+                # Use warmup-specific logging
+                self.logger.log_epoch_warmup(
+                    epoch, epochs, avg_loss, current_lr,
+                    self.lr_controller.global_step, self.lr_controller.warmup_steps
+                )
             else:
-                # Only log training loss and learning rate in non-evaluation epochs
-                self.logger.log_epoch(epoch, epochs, avg_loss)
+                # Use normal logging
+                if epoch % eval_interval == 0 or epoch == epochs:
+                    train_accuracy, eval_accuracy = self._evaluate(epoch)
+                    self.logger.log_epoch(epoch, epochs, avg_loss, current_lr, train_accuracy, eval_accuracy, time_info)
+                else:
+                    self.logger.log_epoch(epoch, epochs, avg_loss, current_lr)
             
             # Save checkpoint
             if epoch % checkpoint_interval == 0 or epoch == epochs:

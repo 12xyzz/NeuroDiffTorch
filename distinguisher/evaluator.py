@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+from torch.cuda.amp import autocast
 from typing import Dict, Any, List
 from .metrics import metric_registry
 
@@ -29,7 +30,7 @@ class Evaluator:
             raise ValueError(f"Unsupported metric type: {self.metric_type}. Available metrics: {available_metrics}")
     
     def evaluate_model(self, model: torch.nn.Module, data_loader: torch.utils.data.DataLoader, 
-                      device: torch.device, epoch: int = None, processor = None) -> Dict[str, Any]:
+                      device: torch.device, epoch: int = None, use_amp: bool = False) -> Dict[str, Any]:
         """
         Evaluate model
         
@@ -38,7 +39,6 @@ class Evaluator:
             data_loader: Data loader
             device: Device
             epoch: Current epoch (optional)
-            processor: Data processor (optional)
             
         Returns:
             Evaluation results dictionary
@@ -49,11 +49,17 @@ class Evaluator:
         
         with torch.no_grad():
             for X_batch, Y_batch in data_loader:
-                # Use processor to process data (if provided)
-                if processor is not None:
-                    X_batch = processor.process(X_batch)
+                # Move data to device
+                X_batch = X_batch.to(device)
+                Y_batch = Y_batch.to(device)
                 
-                logits = model(X_batch)
+                # Use AMP for forward pass if enabled
+                if use_amp and device.type == 'cuda':
+                    with autocast():
+                        logits = model(X_batch)
+                else:
+                    logits = model(X_batch)
+                
                 preds = (torch.sigmoid(logits) > 0.5).float()
                 
                 all_preds.append(preds.cpu().numpy())

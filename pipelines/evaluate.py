@@ -58,11 +58,12 @@ def main():
         print(f"Feature dimension: {dataset_info['feature_dim']}")
         
         batch_size = config_manager.get('training.batch_size')
+        num_workers = config_manager.get('training.num_workers')
         eval_loader = dataset_loader.load_data(
             split='val', 
             batch_size=batch_size, 
-            shuffle=False, 
-            device=device
+            num_workers=num_workers,
+            shuffle=False
         )
         
         # Create data processor
