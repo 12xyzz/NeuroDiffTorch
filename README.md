@@ -3,14 +3,14 @@ A PyTorch framework for neural differential distinguishers in block cipher crypt
 
 ## Usage
 
-### 1. Create cipher dataset
+### 1. Create a cipher dataset
 ```bash
 python pipelines/create.py configs/datasets/speck_32_64.yaml
 ```
 
-### 2. Train neural distinguisher
+### 2. Train a neural differential distinguisher
 ```bash
-python pipelines/train.py configs/speck_32_64/speck_32_64_n5_gohrnet.yaml
+python pipelines/train.py configs/speck_32_64/n5_gohrnet.yaml
 ```
 
 ## Acknowledgements

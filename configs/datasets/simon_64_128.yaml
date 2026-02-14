@@ -1,0 +1,15 @@
+# Dataset
+data: simon_64_128_n13
+data_path: 'data'
+
+# Cipher
+cipher: Simon_64_128
+n: 10**7
+nr: 13
+key_mode: 'random_fixed'
+key: null
+diff: [0x00000000, 0x00000400]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

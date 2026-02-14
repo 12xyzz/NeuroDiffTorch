@@ -1,7 +1,7 @@
 experiment:
-  name: "gohrnet_4x16"
-  output_dir: "output/n7"
-  seed: 42
+  name: "n7_gohrnet_4x16"
+  output_dir: "output/speck_32_64"
+  # seed: 42
 
 data:
   path: "data/speck_32_64_n7"

@@ -1,0 +1,15 @@
+# Dataset
+data: simon_32_64_n11
+data_path: 'data'
+
+# Cipher
+cipher: Simon_32_64
+n: 10**7
+nr: 11
+key_mode: 'random_fixed'
+key: null
+diff: [0x0000, 0x0400]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

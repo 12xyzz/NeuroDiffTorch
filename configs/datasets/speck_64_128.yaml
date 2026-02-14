@@ -1,0 +1,15 @@
+# Dataset
+data: speck_64_128_n8
+data_path: 'data'
+
+# Cipher
+cipher: Speck_64_128
+n: 10**7
+nr: 8
+key_mode: 'random_fixed'
+key: null
+diff: [0x00000080, 0x80000000]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

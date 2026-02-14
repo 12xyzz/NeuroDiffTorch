@@ -1,1 +1,17 @@
 from .speck_32_64 import Speck_32_64_Dataset, Speck_32_64
+from .speck_64_128 import Speck_64_128_Dataset, Speck_64_128
+from .speck_128_256 import Speck_128_256_Dataset, Speck_128_256
+from .simon_32_64 import Simon_32_64_Dataset, Simon_32_64
+from .simon_64_128 import Simon_64_128_Dataset, Simon_64_128
+from .simon_128_256 import Simon_128_256_Dataset, Simon_128_256
+from .simeck_32_64 import Simeck_32_64_Dataset, Simeck_32_64
+from .simeck_48_96 import Simeck_48_96_Dataset, Simeck_48_96
+from .simeck_64_128 import Simeck_64_128_Dataset, Simeck_64_128
+from .tea import Tea_Dataset, Tea
+from .xtea import Xtea_Dataset, Xtea
+from .present import Present_Dataset, Present
+from .katan import Katan_Dataset, Katan
+from .lea import Lea_Dataset, Lea
+from .hight import Hight_Dataset, Hight
+from .chacha import Chacha_Dataset, Chacha
+from .aes import Aes_Dataset, Aes

@@ -4,40 +4,21 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 class Logger:
-    """Log manager"""
-    
     def __init__(self, log_path: str):
-        """
-        Initialize log manager
-        
-        Args:
-            log_path: Log file path
-        """
         self.log_path = log_path
-        # Ensure log directory exists
         os.makedirs(os.path.dirname(log_path), exist_ok=True)
         
-        # Time tracking
         self.start_time = None
         self.epoch_times = []
         self.total_epochs = None
     
     def log(self, message: str, print_to_console: bool = True):
-        """
-        Log message
-        
-        Args:
-            message: Log message
-            print_to_console: Whether to also print to console
-        """
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         log_entry = f"[{timestamp}] {message}"
-        
-        # Write to file
+
         with open(self.log_path, "a", encoding="utf-8") as f:
             f.write(log_entry + "\n")
         
-        # Print to console
         if print_to_console:
             print(log_entry)
     
@@ -45,7 +26,6 @@ class Logger:
                   learning_rate: Optional[float] = None, train_accuracy: Optional[float] = None,
                   eval_accuracy: Optional[float] = None, time_info: Optional[dict] = None,
                   warmup_info: str = ""):
-        """Log training epoch information"""
         message = f"Epoch {epoch}/{total_epochs}"
         if train_loss is not None:
             message += f" - Train Loss: {train_loss:.4f}"
@@ -56,17 +36,14 @@ class Logger:
         if eval_accuracy is not None:
             message += f", Eval Acc: {eval_accuracy:.4f}"
         
-        # Add warmup information
         if warmup_info:
             message += warmup_info
         
-        # Add time information
         if time_info:
             avg_epoch_time = time_info['avg_epoch_time']
             remaining_time = time_info['estimated_remaining_time']
             completion_time = time_info['estimated_completion_time']
             
-            # Format time
             avg_epoch_str = str(timedelta(seconds=int(avg_epoch_time)))
             remaining_str = str(timedelta(seconds=int(remaining_time)))
             completion_str = datetime.fromtimestamp(completion_time).strftime("%H:%M:%S")
@@ -78,7 +55,6 @@ class Logger:
     def log_epoch_warmup(self, epoch: int, total_epochs: int, train_loss: float = None,
                         learning_rate: Optional[float] = None, warmup_step: int = 0, 
                         total_warmup_steps: int = 0):
-        """Log training epoch information during warmup phase"""
         message = f"Epoch {epoch}/{total_epochs}"
         if train_loss is not None:
             message += f" - Train Loss: {train_loss:.4f}"
@@ -90,18 +66,15 @@ class Logger:
         self.log(message)
     
     def log_checkpoint(self, checkpoint_path: str):
-        """Log checkpoint save information"""
         self.log(f"Checkpoint saved: {checkpoint_path}")
     
     def start_training_timer(self, total_epochs: int):
-        """Start training time tracking"""
         self.start_time = time.time()
         self.total_epochs = total_epochs
         self.epoch_times = []
         self.log(f"Started training tracking, total epochs: {total_epochs}")
     
     def record_epoch_time(self, epoch: int):
-        """Record time for each epoch"""
         if self.start_time is None:
             return
         
@@ -109,14 +82,9 @@ class Logger:
         epoch_time = current_time - self.start_time
         self.epoch_times.append(epoch_time)
         
-        # Calculate average epoch time
         avg_epoch_time = epoch_time / len(self.epoch_times)
-        
-        # Calculate estimated remaining time
         remaining_epochs = self.total_epochs - epoch
         estimated_remaining_time = remaining_epochs * avg_epoch_time
-        
-        # Calculate estimated completion time
         estimated_completion_time = current_time + estimated_remaining_time
         
         return {
@@ -128,13 +96,11 @@ class Logger:
         }
     
     def log_experiment_start(self, experiment_name: str):
-        """Log experiment start information"""
         self.log("=" * 50)
         self.log(f"Starting experiment: {experiment_name}")
         self.log("=" * 50)
     
     def log_experiment_end(self, experiment_name: str):
-        """Log experiment end information"""
         self.log("=" * 50)
         self.log(f"Experiment completed: {experiment_name}")
         self.log("=" * 50) 

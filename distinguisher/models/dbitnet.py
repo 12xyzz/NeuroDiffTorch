@@ -3,7 +3,6 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 def get_dilation_rates(input_size):
-    """Helper function to determine the dilation rates of DBitNet given an input_size."""
     drs = []
     while input_size >= 8:
         drs.append(int(input_size / 2 - 1))
@@ -11,14 +10,13 @@ def get_dilation_rates(input_size):
     return drs
 
 class WideNarrowBlock(nn.Module):
-    """Wide-narrow block for DBitNet"""
     def __init__(self, in_channels, out_channels, dilation_rate):
         super().__init__()
         # Wide block
         self.wide_conv = nn.Conv1d(
             in_channels, out_channels, 
             kernel_size=2, 
-            padding=0,  # Valid padding (no padding)
+            padding=0,
             dilation=dilation_rate,
             stride=1
         )
@@ -50,10 +48,18 @@ class WideNarrowBlock(nn.Module):
         return x
 
 class DBitNet(nn.Module):
-    """DBitNet model for neural distinguisher"""
-    
     def __init__(self, length=64, in_channels=1, d1=256, d2=64, n_filters=32, n_add_filters=16):
         super().__init__()
+        
+        # Store initialization parameters
+        self._init_params = {
+            'length': length,
+            'in_channels': in_channels,
+            'd1': d1,
+            'd2': d2,
+            'n_filters': n_filters,
+            'n_add_filters': n_add_filters
+        }
         
         # Determine dilation rates
         self.dilation_rates = get_dilation_rates(length)
@@ -76,7 +82,6 @@ class DBitNet(nn.Module):
         # Prediction head
         self.flatten = nn.Flatten()
         
-        # Compute flattened feature size to create dense0 deterministically so checkpoints load cleanly
         if len(self.dilation_rates) == 0:
             final_length = length
             final_channels = in_channels
@@ -95,6 +100,11 @@ class DBitNet(nn.Module):
         self.bn_dense2 = nn.BatchNorm1d(d2)
         
         self.output = nn.Linear(d2, 1)
+    
+    def get_model_config(self):
+        config = self._init_params.copy()
+        config['dilation_rates'] = self.dilation_rates
+        return config
         
     def forward(self, x):
         # Input shape: [batch, 1, input_size]
@@ -105,7 +115,7 @@ class DBitNet(nn.Module):
         # Prediction head
         x = self.flatten(x)  # [batch, features]
         
-        # Dense layers (matching original structure)
+        # Dense layers
         x = F.relu(self.bn_dense0(self.dense0(x)))
         x = F.relu(self.bn_dense1(self.dense1(x)))
         x = F.relu(self.bn_dense2(self.dense2(x)))

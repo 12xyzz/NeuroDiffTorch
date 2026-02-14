@@ -1,0 +1,43 @@
+experiment:
+  name: "n9_dbitnet_1x256"
+  output_dir: "output/speck_128_256"
+  # seed: 42
+
+data:
+  path: "data/speck_128_256_n9"
+
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape: [1, 256]
+  normalize: true
+
+model:
+  type: "DBitNet"
+  params:
+    length: 256
+    in_channels: 1
+    d1: 256
+    d2: 64
+    n_filters: 32
+    n_add_filters: 16
+
+training:
+  epochs: 40
+  batch_size: 5000
+  num_workers: 24
+  eval_interval: 5
+  checkpoint_interval: 20
+  device: "cuda:0"
+  use_amp: true
+
+  loss:
+    type: "BCEWithLogitsLoss"
+    params: {}
+
+  optimizer:
+    type: "AdamW"
+    params:
+      lr: 1e-3
+      betas: [0.9, 0.999]
+      weight_decay: 1e-5

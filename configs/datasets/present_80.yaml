@@ -1,0 +1,15 @@
+# Dataset
+data: present_80_n9
+data_path: 'data'
+
+# Cipher
+cipher: Present
+n: 10**7
+nr: 9
+key_mode: 'random_fixed'
+key: null
+diff: 0xd00000
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

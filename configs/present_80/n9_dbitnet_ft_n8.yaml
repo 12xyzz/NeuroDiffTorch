@@ -1,0 +1,44 @@
+experiment:
+  name: "n9_dbitnet_1x128_ft_n8"
+  output_dir: "output/present_80"
+  # seed: 42
+
+data:
+  path: "data/present_80_n9"
+
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape: [1, 128]
+  normalize: true
+
+model:
+  type: "DBitNet"
+  params:
+    length: 128
+    in_channels: 1
+    d1: 256
+    d2: 64
+    n_filters: 32
+    n_add_filters: 16
+
+training:
+  epochs: 20
+  batch_size: 5000
+  num_workers: 24
+  eval_interval: 5
+  checkpoint_interval: 5
+  device: "cuda:1"
+  use_amp: true
+  pretrained: "output/present_80/n8_dbitnet_1x128_20260130_011107/checkpoint_10.pth"
+
+  loss:
+    type: "BCEWithLogitsLoss"
+    params: {}
+
+  optimizer:
+    type: "AdamW"
+    params:
+      lr: 1e-3
+      betas: [0.9, 0.999]
+      weight_decay: 1e-5

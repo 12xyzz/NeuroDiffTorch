@@ -4,15 +4,30 @@ from os import urandom
 
 
 class Speck_32_64_Dataset(Dataset):
-    def __init__(self, n, nr, key_mode='random', key=None, diff=(0x0040,0)):
+    def __init__(self, n, nr, key_mode='random', key=None, diff=(0x0040,0x0000), neg='real_encryption', batch_size=10000):
         self.cipher = Speck_32_64()
         self.single_key, self.key_array = self._generate_keys(n, key_mode, key)
-        self.X, self.Y = self.generate_training_data(n, nr, diff)
+        self.n = n
+        self.nr = nr
+        self.diff = diff
+        self.neg = neg
+        self.batch_size = batch_size
+        self.X = None
+        self.Y = None
+        self.training_plaintexts = None
+    
+    def generate_dataset(self):
+        if self.X is None or self.Y is None:
+            self.X, self.Y = self.generate_training_data(self.n, self.nr, self.diff, self.neg, self.batch_size)
 
     def __len__(self):
+        if self.Y is None:
+            raise RuntimeError("Dataset not generated. Call generate_dataset() first.")
         return len(self.Y)
 
     def __getitem__(self, idx):
+        if self.X is None or self.Y is None:
+            raise RuntimeError("Dataset not generated. Call generate_dataset() first.")
         return self.X[idx], self.Y[idx]
 
     def generate_plaintext_triples(self, n, diff):
@@ -25,47 +40,94 @@ class Speck_32_64_Dataset(Dataset):
         p2_l = np.frombuffer(urandom(2*n), dtype=np.uint16)
         p2_r = np.frombuffer(urandom(2*n), dtype=np.uint16)
         
-        p1 = list(zip(p1_l, p1_r))
-        p1_prime = list(zip(p1_prime_l, p1_prime_r))
-        p2 = list(zip(p2_l, p2_r))
+        p1 = np.column_stack([p1_l, p1_r])
+        p1_prime = np.column_stack([p1_prime_l, p1_prime_r])
+        p2 = np.column_stack([p2_l, p2_r])
         
         return p1, p1_prime, p2
     
-    def encrypt_plaintext_pairs(self, p1_list, p2_list, nr):
-        if len(p1_list) != len(p2_list):
-            raise ValueError("plaintext list length must be the same")
-        
-        n = len(p1_list)
-        if n == 0:
-            return [], []
-        
-        p1_l = np.array([p[0] for p in p1_list], dtype=np.uint16)
-        p1_r = np.array([p[1] for p in p1_list], dtype=np.uint16)
-        p2_l = np.array([p[0] for p in p2_list], dtype=np.uint16)
-        p2_r = np.array([p[1] for p in p2_list], dtype=np.uint16)
+    def encrypt_plaintext_pairs(self, p1, p2, nr):
+        if isinstance(p1, np.ndarray) and isinstance(p2, np.ndarray):
+            if p1.shape[0] != p2.shape[0]:
+                raise ValueError("plaintext array length must be the same")
+            n = p1.shape[0]
+            if n == 0:
+                return np.zeros((0, 2), dtype=np.uint16), np.zeros((0, 2), dtype=np.uint16)
+            p1_l = p1[:, 0]
+            p1_r = p1[:, 1]
+            p2_l = p2[:, 0]
+            p2_r = p2[:, 1]
+        else:
+            if len(p1) != len(p2):
+                raise ValueError("plaintext list length must be the same")
+            n = len(p1)
+            if n == 0:
+                return [], []
+            p1_l = np.array([p[0] for p in p1], dtype=np.uint16)
+            p1_r = np.array([p[1] for p in p1], dtype=np.uint16)
+            p2_l = np.array([p[0] for p in p2], dtype=np.uint16)
+            p2_r = np.array([p[1] for p in p2], dtype=np.uint16)
         
         ks = self.cipher.expand_key(self.key_array, nr)
         c1_l, c1_r = self.cipher.encrypt((p1_l, p1_r), ks)
         c2_l, c2_r = self.cipher.encrypt((p2_l, p2_r), ks)
         
-        c1_list = list(zip(c1_l, c1_r))
-        c2_list = list(zip(c2_l, c2_r))
-        
-        return c1_list, c2_list
+        if isinstance(p1, np.ndarray) and isinstance(p2, np.ndarray):
+            c1 = np.column_stack([c1_l, c1_r])
+            c2 = np.column_stack([c2_l, c2_r])
+            return c1, c2
+        else:
+            c1_list = list(zip(c1_l, c1_r))
+            c2_list = list(zip(c2_l, c2_r))
+            return c1_list, c2_list
     
-    def generate_training_data(self, n, nr, diff=(0x0040,0)):
+    def generate_training_data(self, n, nr, diff=(0x0040,0x0000), neg='real_encryption', batch_size=10000):
+        if neg not in ['real_encryption', 'random_bits']:
+            raise ValueError(f"Invalid negative_samples: {neg}. Must be 'real_encryption' or 'random_bits'")
+        
         p1, p1_prime, p2 = self.generate_plaintext_triples(n, diff)
         chosen = np.random.random(n) > 0.5
+
+        if neg == 'real_encryption':
+            self.training_plaintexts = np.concatenate([p1, p1_prime, p2], axis=0)
+        else:  # random_bits
+            self.training_plaintexts = np.concatenate([p1, p1_prime], axis=0)
         
-        c1, c2 = self.encrypt_plaintext_pairs(p1,  [p1_prime[i] if chosen[i] else p2[i] for i in range(n)], nr)
-        Y = chosen.astype(np.uint8)
-        
-        c1_l = np.array([ct[0] for ct in c1], dtype=np.uint16)
-        c1_r = np.array([ct[1] for ct in c1], dtype=np.uint16)
-        c2_l = np.array([ct[0] for ct in c2], dtype=np.uint16)
-        c2_r = np.array([ct[1] for ct in c2], dtype=np.uint16)
-        
-        X = self.cipher.to_bits([c1_l, c1_r, c2_l, c2_r])
+        if neg == 'real_encryption':
+            p2_selected = np.where(chosen[:, np.newaxis], p1_prime, p2)
+            c1, c2 = self.encrypt_plaintext_pairs(p1, p2_selected, nr)
+            Y = chosen.astype(np.uint8)
+
+            c1_l = c1[:, 0]
+            c1_r = c1[:, 1]
+            c2_l = c2[:, 0]
+            c2_r = c2[:, 1]
+
+            X = self.cipher.to_bits([c1_l, c1_r, c2_l, c2_r])
+        else:  # random_bits
+            c1, c1_prime = self.encrypt_plaintext_pairs(p1, p1_prime, nr)
+            Y = chosen.astype(np.uint8)
+
+            c1_l = c1[:, 0]
+            c1_r = c1[:, 1]
+            c1_prime_l = c1_prime[:, 0]
+            c1_prime_r = c1_prime[:, 1]
+            
+            feature_dim = 4 * self.cipher.word_size
+            X = np.zeros((n, feature_dim), dtype=np.uint8)
+            pos_mask = Y == 1
+
+            if np.any(pos_mask):
+                pos_X = self.cipher.to_bits([c1_l[pos_mask], c1_r[pos_mask], 
+                                            c1_prime_l[pos_mask], c1_prime_r[pos_mask]])
+                X[pos_mask] = pos_X
+            
+            neg_mask = Y == 0
+            if np.any(neg_mask):
+                num_neg = int(np.sum(neg_mask))
+                rand_bits = (np.frombuffer(urandom(num_neg * feature_dim), dtype=np.uint8) & 1)\
+                            .reshape(num_neg, feature_dim)
+                X[neg_mask] = rand_bits
         
         return X, Y
 

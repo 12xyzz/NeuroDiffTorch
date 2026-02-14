@@ -1,0 +1,15 @@
+# Dataset
+data: lea_128_n11
+data_path: 'data'
+
+# Cipher
+cipher: Lea
+n: 10**7
+nr: 11
+key_mode: 'random_fixed'
+key: null
+diff: [0x00000080, 0x00000080, 0x00000080, 0x04000080]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

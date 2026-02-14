@@ -1,0 +1,43 @@
+experiment:
+  name: "n11_dbitnet_1x128"
+  output_dir: "output/simon_64_128"
+  # seed: 42
+
+data:
+  path: "data/simon_64_128_n11"
+
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape: [1, 128]
+  normalize: true
+
+model:
+  type: "DBitNet"
+  params:
+    length: 128
+    in_channels: 1
+    d1: 256
+    d2: 64
+    n_filters: 32
+    n_add_filters: 16
+
+training:
+  epochs: 40
+  batch_size: 5000
+  num_workers: 24
+  eval_interval: 5
+  checkpoint_interval: 10
+  device: "cuda:0"
+  use_amp: true
+
+  loss:
+    type: "BCEWithLogitsLoss"
+    params: {}
+
+  optimizer:
+    type: "AdamW"
+    params:
+      lr: 1e-3
+      betas: [0.9, 0.999]
+      weight_decay: 1e-5

@@ -1,0 +1,40 @@
+experiment:
+  name: n7_gohrnet_4x16_diff_0040_0000
+  output_dir: output/amp/diff_0040_0000
+data:
+  path: data/speck_32_64_n7_diff_0040_0000
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape:
+  - 4
+  - 16
+  normalize: true
+model:
+  type: GohrNet
+  params:
+    length: 16
+    in_channels: 4
+    n_filters: 32
+    n_blocks: 10
+    d1: 64
+    d2: 64
+training:
+  epochs: 10
+  batch_size: 5000
+  num_workers: 24
+  eval_interval: 5
+  checkpoint_interval: 5
+  device: cuda:0
+  use_amp: true
+  loss:
+    type: BCEWithLogitsLoss
+    params: {}
+  optimizer:
+    type: AdamW
+    params:
+      lr: 0.002
+      betas:
+      - 0.9
+      - 0.999
+      weight_decay: 1.0e-05

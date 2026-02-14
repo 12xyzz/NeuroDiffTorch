@@ -1,0 +1,44 @@
+experiment:
+  name: "n8_dbitnet_1x128_ft_n7"
+  output_dir: "output/speck_64_128"
+  # seed: 42
+
+data:
+  path: "data/speck_64_128_n8"
+
+processor:
+  swap_pairs: false
+  xor_channel: false
+  reshape: [1, 128]
+  normalize: true
+
+model:
+  type: "DBitNet"
+  params:
+    length: 128
+    in_channels: 1
+    d1: 256
+    d2: 64
+    n_filters: 32
+    n_add_filters: 16
+
+training:
+  epochs: 20
+  batch_size: 5000
+  num_workers: 24
+  eval_interval: 5
+  checkpoint_interval: 5
+  device: "cuda:0"
+  use_amp: true
+  pretrained: "output/speck_64_128/n7_dbitnet_1x128_20260126_125640/checkpoint_20.pth"
+
+  loss:
+    type: "BCEWithLogitsLoss"
+    params: {}
+
+  optimizer:
+    type: "AdamW"
+    params:
+      lr: 1e-3
+      betas: [0.9, 0.999]
+      weight_decay: 1e-5

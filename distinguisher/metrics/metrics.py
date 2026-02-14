@@ -3,23 +3,18 @@ from sklearn.metrics import confusion_matrix, accuracy_score, precision_score, r
 from typing import Dict, Any
 
 class ConfusionMatrix:
-    """Confusion matrix evaluation metric"""
-    
     def __init__(self):
         pass
     
     def _convert_to_labels(self, y_pred: np.ndarray, threshold: float = 0.5) -> np.ndarray:
-        """Convert prediction results to labels"""
         if y_pred.shape[1] == 1:
             y_pred_proba = y_pred.flatten()
         else:
-            y_pred_proba = y_pred[:, 1]  # Get positive class probability
+            y_pred_proba = y_pred[:, 1]
         
         return (y_pred_proba >= threshold).astype(int)
     
     def compute(self, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, Any]:
-        """Compute confusion matrix and related metrics"""
-        # Convert to labels
         y_pred_labels = self._convert_to_labels(y_pred)
         
         cm = confusion_matrix(y_true, y_pred_labels)
@@ -41,7 +36,6 @@ class ConfusionMatrix:
         }
     
     def format_output(self, metrics: Dict[str, Any], epoch: int = None) -> str:
-        """Format output"""
         log_lines = []
         if epoch is not None:
             log_lines.append(f"Epoch {epoch} - Metrics:")

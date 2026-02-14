@@ -1,0 +1,15 @@
+# Dataset
+data: speck_32_64_n7_diff_0040_0000
+data_path: 'data'
+
+# Cipher
+cipher: Speck_32_64
+n: 10000000
+nr: 7
+key_mode: 'random_fixed'
+key: None
+diff: [0x0040, 0x0000]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

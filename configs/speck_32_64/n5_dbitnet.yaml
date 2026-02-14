@@ -1,7 +1,7 @@
 experiment:
-  name: "dbitnet_1x64"
-  output_dir: "output/n5"
-  seed: 42
+  name: "n5_dbitnet_1x64"
+  output_dir: "output/speck_32_64"
+  # seed: 42
 
 data:
   path: "data/speck_32_64_n5"

@@ -1,0 +1,15 @@
+# Dataset
+data: hight_n10
+data_path: 'data'
+
+# Cipher
+cipher: Hight
+n: 10**7
+nr: 10
+key_mode: 'random_fixed'
+key: null
+diff: [0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00]
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'

@@ -1,0 +1,15 @@
+# Dataset
+data: katan_32_n65
+data_path: 'data'
+
+# Cipher
+cipher: Katan
+n: 10**7
+nr: 65
+key_mode: 'random_fixed'
+key: null
+diff: 0x400000
+# batch_size: 10000
+# seed: 42
+train_ratio: 0.9
+negative_samples: 'real_encryption'
