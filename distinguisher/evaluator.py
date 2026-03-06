@@ -1,6 +1,5 @@
 import numpy as np
 import torch
-from torch.cuda.amp import autocast
 from typing import Dict, Any, List
 from .metrics import metric_registry
 
@@ -30,9 +29,9 @@ class Evaluator:
             for X_batch, Y_batch in data_loader:
                 X_batch = X_batch.to(device)
                 Y_batch = Y_batch.to(device)
-                
+
                 if use_amp and device.type == 'cuda':
-                    with autocast():
+                    with torch.amp.autocast(device_type='cuda'):
                         logits = model(X_batch)
                 else:
                     logits = model(X_batch)

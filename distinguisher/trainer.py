@@ -10,7 +10,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.cuda.amp import autocast, GradScaler
+from torch.amp import GradScaler
 from torch.utils.data import TensorDataset, DataLoader, random_split
 
 from utils import ConfigManager, Logger
@@ -359,11 +359,11 @@ class Trainer:
                 
                 self.optimizer.zero_grad()
 
-                if self.scaler is not None:
-                    with autocast():
+                if self.scaler is not None and self.device.type == 'cuda':
+                    with torch.amp.autocast(device_type='cuda'):
                         logits = self.model(X_batch)
                         loss = self.criterion(logits, Y_batch)
-                    
+
                     self.scaler.scale(loss).backward()
                     self.scaler.step(self.optimizer)
                     self.scaler.update()

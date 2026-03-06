@@ -95,7 +95,7 @@ def load_model_from_checkpoint(config_manager, checkpoint_path, device, tee=None
     log_print(f"Creating model: {model_type}", tee)
     model = model_registry.get_model(model_type, **params)
     log_print(f"Loading checkpoint from: {checkpoint_path}", tee, indent=2)
-    checkpoint = torch.load(checkpoint_path, map_location=device)
+    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=True)
     if 'model_state_dict' in checkpoint:
         model.load_state_dict(checkpoint['model_state_dict'])
     else:
