@@ -1,0 +1,104 @@
+/* Algorithm block (LaTeX-style with \( \) math via MathJax) */
+.algorithm-block {
+  max-width: 860px;
+  margin: 1.5rem 0;
+  padding: 0;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 17px;
+  line-height: 1.35;
+  color: #000;
+  border-top: 1.6px solid #444;
+  border-bottom: 1.6px solid #444;
+}
+
+.algorithm-caption {
+  padding: 4px 0;
+  border-bottom: 1.2px solid #444;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.algorithm-caption strong {
+  font-weight: 700;
+}
+
+.algorithm-block .caption-text {
+  margin-left: 0.35em;
+}
+
+.algorithm-body {
+  padding: 4px 0 3px 0;
+}
+
+.algorithm-body p {
+  margin: 0 0 2px 0;
+}
+
+.algorithm-block .algo-section {
+  margin: 0 0 1px 0;
+}
+
+.algorithm-block .algo-label {
+  margin: 0;
+  line-height: 1.1;
+}
+
+.algorithm-block .algo-indent {
+  margin-left: 1.55em;
+  line-height: 1.35;
+}
+
+.algorithm-block .algo-indent > div {
+  margin: 0;
+}
+
+/* Keep MathJax inline inside algorithm text */
+.algorithm-block mjx-container {
+  display: inline !important;
+  font-size: 100% !important;
+}
+
+.algorithm-block mjx-container[jax="SVG"] > svg {
+  display: inline;
+  vertical-align: -0.25em;
+}
+
+/* Shared highlight background */
+:root {
+  --algo-highlight-bg: #f5f5f5;
+}
+
+.dark {
+  --algo-highlight-bg: rgba(255, 255, 255, 0.08);
+}
+
+.methodology-highlight {
+  background: var(--algo-highlight-bg);
+  padding: 0.1em 0.3em;
+  border-radius: 2px;
+}
+
+/* Added steps */
+.algorithm-block .algo-highlight {
+  background: var(--algo-highlight-bg);
+  color: #000;
+  padding: 0.15em 0.35em;
+  border-radius: 2px;
+  margin-top: 2px;
+  display: block;
+}
+
+.algorithm-block .algo-highlight:first-of-type {
+  margin-top: 4px;
+}
+
+/* Inline variant: no line break */
+.algorithm-block .algo-highlight.algo-neural-inline {
+  display: inline;
+  margin-top: 0;
+}
+
+.dark .algorithm-block .algo-highlight {
+  background: var(--algo-highlight-bg);
+  color: inherit;
+}

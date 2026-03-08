@@ -1,0 +1,80 @@
+---
+const algorithmHtml = `
+<div class="algorithm-block">
+  <div class="algorithm-caption">
+    <strong>Algorithm</strong>
+    <span class="caption-text">
+      The NeuralCPA Experiment \\( \\operatorname{Exp}^{\\operatorname{NeuralCPA}}_{\\Pi,\\mathcal{A}}(\\lambda) \\)
+    </span>
+  </div>
+
+  <div class="algorithm-body">
+    <p>
+      <strong>Require:</strong>
+      Encryption scheme \\( \\Pi \\), message space \\( \\mathcal{M} \\), key space \\( \\mathcal{K} \\).
+    </p>
+
+    <p>
+      <strong>Ensure:</strong>
+      Experiment outcome (1 if the <span class="latex-tt">adversary</span> \\( \\mathcal{A} \\) wins, 0 otherwise).
+    </p>
+
+    <p>
+      <strong>Initialization:</strong>
+      The <span class="latex-tt">challenger</span> \\( \\mathcal{C} \\) samples a secret key \\( k \\xleftarrow{\\$} \\mathcal{K} \\) and gives \\( \\mathcal{A} \\) access to the encryption <span class="latex-tt">oracle</span> \\( E_k(\\cdot) \\).
+      <span class="algo-highlight algo-neural-inline">\\( \\mathcal{A} \\) chooses a training data size \\( n \\) and a specific input difference \\( \\delta \\).</span>
+    </p>
+
+    <div class="algo-section">
+      <div class="algo-label"><strong>Pre-Challenge Phase:</strong></div>
+      <div class="algo-indent">
+        \\( \\mathcal{A} \\) may adaptively issue any encryption-oracle query \\( q \\in \\mathcal{M} \\) and receives the
+        corresponding ciphertext \\( E_k(q) \\).
+        <div class="algo-highlight">\\( \\mathcal{A} \\) samples \\( n/2 \\) plaintext pairs satisfying the preset input difference \\( \\delta \\).</div>
+        <div class="algo-highlight">\\( \\mathcal{A} \\) samples \\( n/2 \\) plaintext pairs <em>not</em> satisfying \\( \\delta \\).</div>
+        <div class="algo-highlight">\\( \\mathcal{A} \\) queries the encryption oracle on all \\( n \\) pairs and obtains their ciphertexts.</div>
+        <div class="algo-highlight">\\( \\mathcal{A} \\) trains a \\( \\mathcal{N}\\mathcal{D} \\) using these \\( n \\) ciphertext pairs.</div>
+      </div>
+    </div>
+
+    <div class="algo-section">
+      <div class="algo-label"><strong>Challenge Phase:</strong></div>
+      <div class="algo-indent">
+        <div>\\( \\mathcal{A} \\) outputs two challenge messages \\( m_0, m_1 \\in \\mathcal{M} \\).</div>
+        <div>\\( \\mathcal{C} \\) samples a random bit \\( b \\xleftarrow{\\$} \\{0,1\\} \\).</div>
+        <div>\\( \\mathcal{C} \\) returns the challenge ciphertext \\( c^\\star \\leftarrow E_k(m_b) \\).</div>
+      </div>
+    </div>
+
+    <div class="algo-section">
+      <div class="algo-label"><strong>Post-Challenge Phase:</strong></div>
+      <div class="algo-indent">
+        \\( \\mathcal{A} \\) may continue to issue encryption-oracle queries, distinct from the challenge messages
+        \\( m_0 \\) and \\( m_1 \\).
+        <div class="algo-highlight">\\( \\mathcal{A} \\) derives modified messages \\( m_{0,\\mathrm{aux}} \\) and \\( m_{1,\\mathrm{aux}} \\) by adding the fixed difference \\( \\delta \\).</div>
+        <div class="algo-highlight">\\( \\mathcal{A} \\) queries the encryption oracle and obtains the ciphertexts \\( c_{0,\\mathrm{aux}} \\) and \\( c_{1,\\mathrm{aux}} \\).</div>
+        <div class="algo-highlight">\\( \\mathcal{N}\\mathcal{D} \\) outputs confidence scores \\( p_0 \\gets \\mathcal{N}\\mathcal{D}(c^\\star, c_{0,\\mathrm{aux}}) \\) and \\( p_1 \\gets \\mathcal{N}\\mathcal{D}(c^\\star, c_{1,\\mathrm{aux}}) \\).</div>
+      </div>
+    </div>
+
+    <div class="algo-section">
+      <div class="algo-label"><strong>Guess Phase:</strong></div>
+      <div class="algo-indent">
+        \\( \\mathcal{A} \\) outputs a guess \\( b' \\in \\{0,1\\} \\).
+        <span class="algo-highlight algo-neural-inline">\\( \\mathcal{A} \\) outputs \\( b' = 0 \\) if \\( p_0 > p_1 \\), otherwise \\( b' = 1 \\).</span>
+      </div>
+    </div>
+
+    <div class="algo-section">
+      <div class="algo-label"><strong>Outcome:</strong></div>
+      <div class="algo-indent">
+        Return \\( 1 \\) if \\( b' = b \\), otherwise \\( 0 \\).
+      </div>
+    </div>
+    
+  </div>
+</div>
+`;
+---
+
+<Fragment set:html={algorithmHtml} />
