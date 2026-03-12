@@ -94,6 +94,11 @@ main mjx-container[jax="SVG"] > svg {
   vertical-align: -0.25em;
 }
 
+/* KaTeX inline math */
+main .katex {
+  font-size: 1em;
+}
+
 .full-bleed,
 main .katex-display {
   margin-inline: calc(var(--actual-inline-margin) * -1);
@@ -107,25 +112,6 @@ main .katex-display {
   padding-inline: 1.5rem;
   width: max-content;
   margin-inline: auto;
-}
-
-.three-line-table table {
-  border-collapse: collapse;
-  width: 100%;
-  font-family: var(--font-poppins), sans-serif;
-}
-.three-line-table th,
-.three-line-table td {
-  padding: 0.4em 0.75em;
-  text-align: left;
-  border: none;
-}
-.three-line-table thead {
-  border-top: 1.5px solid currentColor;
-  border-bottom: 1px solid currentColor;
-}
-.three-line-table tbody tr:last-child {
-  border-bottom: 1.5px solid currentColor;
 }
 
 /* Table cell alignment */

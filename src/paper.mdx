@@ -10,16 +10,13 @@ authors:
   - name: Yangguang Tian
     notes: ["1"]
   - name: Gaofei Wu
-    notes: ["2*"]
+    notes: ["2"]
   - name: Xiatian Zhu
-    notes: ["1*"]
+    notes: ["1"]
 institutions:
   - University of Surrey
   - Xidian University
 # conference: Conference Name
-notes:
-  - symbol: "*"
-    text: Corresponding author
 links:
   - name: Paper
     url: https://eprint.iacr.org/2026/328
@@ -77,20 +74,76 @@ Our experimental results confirm that NeuralCPA consistently achieves significan
 
 </HighlightedSection>
 
+## Contributions
+
+- **Deep learning formulation of CPA.** We present the first rigorous and systematic formulation of CPA from a deep learning perspective, casting the CPA experiment as a supervised learning task.
+- **Analysis for block ciphers.** We introduce NeuralCPA, a neural network–based framework for evaluating the CPA security of block ciphers and empirically demonstrate its effectiveness.
+- **Extensions for multi-instance settings.** We show that NeuralCPA can be extended to multi-instance settings, where even a marginal advantage can be ideally amplified.
+
+## Overview
+
+<strong>Problem.</strong><br />
+In the CPA game, two plaintexts $m_0$ and $m_1$ are given. A hidden bit $b \in \{0,1\}$ selects one of them, and $m_b$ is encrypted by $E_k$ to produce the challenge ciphertext $c^\star$. The goal is to guess $b$.
+
+<strong>Idea.</strong><br />
+NeuralCPA reformulates this problem as a supervised learning task by leveraging the distinguishing capability of neural networks.
+
+The overall workflow of NeuralCPA is shown below.<br />
+
+<strong>Training.</strong><br />
+<div class="scale-85 origin-center mx-auto">
+  <Figure>
+    <Picture
+      slot="figure"
+      src="../assets/train.pdf"
+      alt=""
+      priority={true}
+      invertInDarkMode={true}
+    />
+  </Figure>
+</div>
+
+1\. Sample positive pairs $\mathcal{P}^+$ satisfying the preset input difference $\delta$ (e.g., pairs of the form $(m, m \oplus \delta)$ for a plaintext $m$), and negative pairs $\mathcal{P}^-$ not satisfying $\delta$, which are merged into the set $\mathcal{P}$.<br />
+2\. Encrypt all pairs in $\mathcal{P}$ using the block cipher $E_k$ to obtain the ciphertext pairs $\mathcal{C}$.<br />
+3\. Train a neural distinguisher on $\mathcal{C}$ to predict whether the corresponding plaintext pair satisfies $\delta$.<br />
+
+<strong>Testing.</strong><br />
+<div class="scale-90 origin-center mx-auto">
+  <Figure>
+    <Picture
+      slot="figure"
+      src="../assets/post-phase.pdf"
+      alt=""
+      priority={true}
+      invertInDarkMode={true}
+    />
+  </Figure>
+</div>
+
+1\. Construct auxiliary plaintexts as $m_{i,aux} = m_i \oplus \delta$, $i \in \{0,1\}$.<br />
+2\. Encrypt the auxiliary plaintexts using $E_k$ to obtain $c_{i,aux}$.<br />
+3\. Use the trained distinguisher to compute a score $p_i$ for each ciphertext pair $(c^\star, c_{i,aux})$.<br />
+4\. Output the final guess $i = \arg\max_i p_i$.<br />
+
+<strong>Intuition.</strong><br />
+The neural distinguisher is trained to distinguish ciphertext pairs whose underlying plaintext pairs follow the difference $\delta$.
+If $c^\star = E_k(m_b)$, then $(c^\star, c_{b,aux})$ forms a differential pair $(E_k(m_b), E_k(m_b \oplus \delta))$, which the distinguisher is more likely to recognize. 
+Consequently, the score $p_b$ tends to be larger than $p_{1-b}$, enabling recovery of $b$ by selecting $i = \arg\max_i p_i$.
+
 ## Methodology
 
-NeuralCPA operates in three stages: 
-(i) *training the neural distinguisher* during the pre-challenge phase, 
-(ii) *constructing auxiliary ciphertext pairs using the input difference* in the post-challenge phase, and 
-(iii) *choosing the plaintext by comparing auxiliary scores* in the guess phase.
+When mapped to the standard CPA experiment, NeuralCPA operates in three stages:<br />
+(i) *Training the neural distinguisher* during the pre-challenge phase.<br />
+(ii) *Construct auxiliary ciphertext pairs using the input difference* in the post-challenge phase.<br />
+(iii) *Choose the plaintext by comparing auxiliary scores* in the guess phase.
 
-The formal definition follows the standard CPA experiment structure, with the steps introduced by our method <span class="methodology-highlight">**highlighted**</span> below.
+The formal definition is given below, with the steps introduced by our method <span class="methodology-highlight">highlighted</span>.
 
 <AlgorithmBlock />
 
 ## Results
 
-We evaluate NeuralCPA across multiple round-reduced ciphers. The table reports the distinguishing Accuracy (Acc.) and CPA Success Rate (CPA SR.), each evaluated on \\(10^6\\) samples with plaintexts disjoint from the training set. The results support the effectiveness of the proposed approach.
+We evaluate NeuralCPA across multiple round-reduced ciphers. The table reports the distinguishing Accuracy (Acc.) and CPA Success Rate (CPA SR.), each evaluated on $10^6$ samples with plaintexts disjoint from the training set. The results support the effectiveness of the proposed approach.
 
 <ResultsTable />
 
@@ -100,136 +153,6 @@ We evaluate NeuralCPA across multiple round-reduced ciphers. The table reports t
 <InputTable />
 
 **Notes.** *Input difference:* leading zeros omitted (e.g. <span class="latex-tt">0x40</span> equals to <span class="latex-tt">0x0040</span> in full 16-bit form). 
-*/}
-
-## Contributions
-
-- **Deep learning formulation of CPA.** We present the first rigorous and systematic formulation of CPA from a deep learning perspective, casting the CPA experiment as a supervised learning task.
-- **Analysis for block ciphers.** We introduce NeuralCPA, a neural network–based framework for evaluating the CPA security of block ciphers and empirically demonstrate its effectiveness.
-- **Extensions for multi-instance settings.** We show that NeuralCPA can be extended to multi-instance settings, where even a marginal advantage can be ideally amplified.
-
-{/*
-## Visuals
-
-### Picture
-
-Use the `Picture` component to display images. If you have a figure in PDF format, you can pass in its path as the `src` prop and it will be converted into a web-friendly image automatically.
-
-<Picture src={dogsDiffc} alt="Photo of two running dogs, lossily compressed using the DiffC algorithm" />
-
-### Wide visual
-
-I constrained the maximum width of the text column to make sure it's readable even when the screen is wide. But images and other visuals should "break out" and take up more horizontal space: for this, try wrapping them in the `Wide` component.
-
-<Wide>
-  <Picture src={dogsDiffc} alt="Photo of two running dogs, lossily compressed using the DiffC algorithm" />
-</Wide>
-
-### Figure with caption
-
-Wrap a visual in a `Figure` component to add a caption.
-
-<Figure>
-  <Picture slot="figure" src={dogsDiffc} alt="Photo of two running dogs, lossily compressed using the DiffC algorithm" />
-  <Fragment slot="caption">A photo of two dogs running side-by-side in shallow water, lossily compressed using the [DiffC algorithm](https://jeremyiv.github.io/diffc-project-page/).</Fragment>
-</Figure>
-
-### Comparison slider
-
-Use the `Comparison` component to compare two visuals with an interactive slider.
-
-<Comparison client:idle >
-  <Picture slot="itemOne" src={dogsDiffc} alt="Photo of two running dogs, lossily compressed using the DiffC algorithm" />
-  <Picture slot="itemTwo" src={dogsTrue} alt="True photo of two dogs running side-by-side in shallow water" />
-</Comparison>
-
-### Tab panels
-
-Tab panels are a great way to display a labeled collection of related visuals without taking up too much space.
-
-<Tabs defaultValue="true">
-  <TabsList>
-    <TabsTrigger value="true">Ground truth</TabsTrigger>
-    <TabsTrigger value="diffc">DiffC (Flux-dev)</TabsTrigger>
-    <TabsTrigger value="msillm">MS-ILLM</TabsTrigger>
-  </TabsList>
-  <TabsContent value="true">
-    <Picture
-      src={dogsTrue}
-      alt="True photo of two dogs running side-by-side in shallow water"
-    />
-  </TabsContent>
-  <TabsContent value="diffc">
-    <Picture
-      src={dogsDiffc}
-      alt="Photo of two running dogs, lossily compressed using the DiffC algorithm"
-    />
-  </TabsContent>
-  <TabsContent value="msillm">
-    <Picture
-      src={dogsMsillm}
-      alt="Photo of two running dogs, lossily compressed using MS-ILLM"
-    />
-  </TabsContent>
-</Tabs>
-
-### Carousel
-
-A carousel is another useful pattern for a collection of visuals that don't necessarily have meaningful labels.
-
-<Carousel>
-  <CarouselSlide>
-    <Picture src={dogsTrue} alt="True photo of two dogs running side-by-side in shallow water" />
-  </CarouselSlide>
-  <CarouselSlide>
-    <Picture src={dogsDiffc} alt="Photo of two running dogs, lossily compressed using the DiffC algorithm" />
-  </CarouselSlide>
-  <CarouselSlide>
-    <Picture
-      src={dogsMsillm}
-      alt="Photo of two running dogs, lossily compressed using MS-ILLM"
-    />
-  </CarouselSlide>
-</Carousel>
-
-## Two columns
-
-Use the two columns component to display two columns of content. In this example, the first column contains a YouTube video embed and the second column contains an interactive 3D model viewer. By default, they display side by side, but if the screen is narrow enough (for example, on mobile), they're arranged vertically.
-
-<TwoColumns>
-  <YouTubeVideo slot="left" videoId="wjZofJX0v4M" />
-  <ModelViewer slot="right" src="/BoxVertexColors.glb" alt="A cube colored with a rainbow gradient" />
-</TwoColumns>
-
-## $\LaTeX$
-
-You can also add $\LaTeX$ formulas, rendered during the build process using [$\KaTeX$](https://katex.org/) so they're quick to load for visitors of your project page. You can write them inline, like this: $a^2 + b^2 = c^2$. Or, you can write them as a block:
-
-$$
-\int_a^b f(x) dx
-$$
-
-## Citation
-
-If you copy your bibliography into `./bibliography.bib`, you can cite papers using their BibTeX keys, and they'll be automatically formatted and included in the bibliography section at the end. For example: [@vaswani2017attention]. Note that these citations are distinct from footnotes[^mynote], which show up in a separate section if you use them.
-
-[^mynote]: On the web, they should really be called "endnotes", since each page constitutes a full document.
-
-## Table
-
-Add simple tables using [GitHub Flavored Markdown syntax](https://docs.github.com/en/get-started/writing-on-github/working-with-advanced-formatting/organizing-information-with-tables):
-
-| Model | Accuracy | F1 score | Training time (hours) |
-| :--- | :---: | :---: | :---: |
-| BERT-base | 0.89 | 0.87 | 4.5 |
-| RoBERTa-large | 0.92 | 0.91 | 7.2 |
-| DistilBERT | 0.86 | 0.84 | 2.1 |
-| XLNet | 0.90 | 0.89 | 6.8 |
-
-## Bibliography
-
-[^ref]
-
 */}
 
 ## BibTeX

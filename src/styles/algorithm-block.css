@@ -76,6 +76,7 @@
   background: var(--algo-highlight-bg);
   padding: 0.1em 0.3em;
   border-radius: 2px;
+  color: #000;
 }
 
 /* Added steps */
