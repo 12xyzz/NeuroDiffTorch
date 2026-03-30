@@ -39,8 +39,7 @@ const {
   theme = "device",
 } = frontmatter as Frontmatter;
 
-const titleLines = title.trim().split("\n").filter(Boolean);
-const titlePlain = title.replace(/\n/g, " ").trim();
+const titlePlain = title.replace(/\s+/g, " ").trim();
 
 const baseUrl = import.meta.env.BASE_URL;
 const prefix = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
@@ -75,14 +74,10 @@ const prefix = baseUrl.endsWith("/") ? baseUrl : baseUrl + "/";
   <body
     class="prose prose-lg prose-zinc dark:prose-invert prose-a:text-blue-500 prose-a:dark:text-blue-300 prose-a:no-underline prose-a:hover:underline prose-a:font-normal prose-code:bg-zinc-200 prose-code:dark:bg-zinc-800 prose-code:text-zinc-800 prose-code:dark:text-zinc-200 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:font-medium prose-code:before:content-none prose-code:after:content-none max-w-none pt-16 pb-6 font-(family-name:--font-noto-sans)"
   >
-    <header class="mx-auto mb-12 max-w-[50rem] px-6 text-center font-(family-name:--font-poppins)">
-      <h1 class="text-4xl font-medium">
-        {titleLines.length > 1
-          ? titleLines.map((line) => (
-            <span class="block whitespace-nowrap">{line}</span>
-          ))
-          : <span class="whitespace-nowrap">{title}</span>}
-      </h1>
+    <header
+      class="not-prose mx-auto mb-12 w-full max-w-[60rem] px-6 text-center font-(family-name:--font-poppins) text-zinc-900 dark:text-zinc-50"
+    >
+      <h1 class="mb-8 text-4xl font-medium leading-[1.28]">{titlePlain}</h1>
       <div class="flex flex-col items-center gap-6">
         <Authors authors={authors} institutions={institutions} />
         {conference && <div>{conference}</div>}
