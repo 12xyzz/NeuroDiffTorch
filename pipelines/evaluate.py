@@ -4,6 +4,7 @@ import sys
 import os
 import torch
 import traceback
+from torch.utils.data import TensorDataset, DataLoader
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -44,15 +45,30 @@ def main():
         
         batch_size = config_manager.get('training.batch_size')
         num_workers = config_manager.get('training.num_workers')
-        eval_loader = dataset_loader.load_data(
-            split='val', 
-            batch_size=batch_size, 
+        raw_eval_loader = dataset_loader.load_data(
+            split='val',
+            batch_size=batch_size,
             num_workers=num_workers,
-            shuffle=False
+            shuffle=False,
         )
 
         processor_config = config_manager.get('processor', {})
         processor = DataProcessor(processor_config)
+
+        all_processed_data, all_labels = [], []
+        for X_batch, Y_batch in raw_eval_loader:
+            all_processed_data.append(processor.process(X_batch).cpu())
+            all_labels.append(Y_batch.cpu())
+        processed_data = torch.cat(all_processed_data, dim=0)
+        labels = torch.cat(all_labels, dim=0)
+        eval_loader = DataLoader(
+            TensorDataset(processed_data, labels),
+            batch_size=batch_size,
+            num_workers=num_workers,
+            shuffle=False,
+            pin_memory=True,
+            persistent_workers=num_workers > 0,
+        )
 
         model_config = config_manager.get_model_config()
         model_type = model_config['type']
@@ -97,7 +113,7 @@ def main():
         evaluator = Evaluator(metric_type)
 
         print("Starting evaluation...")
-        metrics = evaluator.evaluate_model(model, eval_loader, device, None, processor)
+        metrics = evaluator.evaluate_model(model, eval_loader, device)
         
         print("\nEvaluation results:")
         print(evaluator.format_evaluation_results(metrics))

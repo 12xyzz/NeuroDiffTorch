@@ -110,7 +110,12 @@ def generate_cpa_dataset(cipher_type, key, nr, n, diff, data_path, tee=None):
         training_plaintexts = load_training_plaintexts(data_path, tee)
         
         dataset_class = dataset_registry.get_dataset_class(cipher_type)
-        dataset = dataset_class(n=n, nr=nr, key_mode='input_fixed', key=key, diff=diff)
+        
+        if key is None:
+            log_print("CPA key is null; generating a random fixed key for this CPA run", tee, indent=2)
+            dataset = dataset_class(n=n, nr=nr, key_mode='random_fixed', key=None, diff=diff)
+        else:
+            dataset = dataset_class(n=n, nr=nr, key_mode='input_fixed', key=key, diff=diff)
         
         if hasattr(dataset, 'generate_plaintext_triples'):
             # Step 1: Generate plaintext triples: A, A', B
